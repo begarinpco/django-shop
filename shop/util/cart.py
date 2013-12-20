@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
-from shop.models.cartmodel import Cart
+from shop.models.cartmodel import Cart, CartItem  # I add CartItem <-- PB
 from django.contrib.auth.models import AnonymousUser
+
+from shop.models.productmodel import Product # I add this import <-- PB
+from django.contrib import messages  # I add this import <-- PB
+from django.utils.translation import ugettext_lazy as _   # I add this import <-- PB
+
 
 def get_cart_from_database(request):
     database_cart = Cart.objects.filter(user=request.user)
