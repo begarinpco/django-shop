@@ -32,11 +32,6 @@ class CheckoutSelectionView(LoginMixin, ShopTemplateView):
             AddressModel, exclude=['user_shipping', 'user_billing'])
         return form_class
 
-    def get_shipping_form_class(self):
-        """
-        Provided for extensibility.
-        """
-        return self._get_dynamic_form_class_from_factory()
 
     def get_billing_form_class(self):
         """
@@ -56,46 +51,7 @@ class CheckoutSelectionView(LoginMixin, ShopTemplateView):
         add_order_to_request(request, order)
         return order
 
-    def get_shipping_address_form(self):
-        """
-        Initializes and handles the form for the shipping address.
 
-        AddressModel is a model of the type defined in
-        ``settings.SHOP_ADDRESS_MODEL``.
-
-        The trick here is that we generate a ModelForm for whatever model was
-        passed to us by the SHOP_ADDRESS_MODEL setting, and us this, prefixed,
-        as the shipping address form. So this can be as complex or as simple as
-        one wants.
-
-        Subclasses of this view can obviously override this method and return
-        any other form instead.
-        """
-        # Try to get the cached version first.
-        form = getattr(self, '_shipping_form', None)
-        if not form:
-            # Create a dynamic Form class for the model specified as the
-            # address model
-            form_class = self.get_shipping_form_class()
-
-            # Try to get a shipping address instance from the request (user or
-            # session))
-            shipping_address = get_shipping_address_from_request(self.request)
-            if self.request.method == "POST":
-                form = form_class(self.request.POST, prefix="ship",
-                    instance=shipping_address)
-            else:
-                # We should either have an instance, or None
-                if not shipping_address:
-                    # The user or guest doesn't already have a favorite
-                    # address. Instanciate a blank one, and use this as the
-                    # default value for the form.
-                    shipping_address = AddressModel()
-
-                # Instanciate the form
-                form = form_class(instance=shipping_address, prefix="ship")
-            setattr(self, '_shipping_form', form)
-        return form
 
     def get_billing_address_form(self):
         """
@@ -178,7 +134,7 @@ class CheckoutSelectionView(LoginMixin, ShopTemplateView):
 
     def post(self, *args, **kwargs):
         """ Called when view is POSTed """
-        shipping_form = self.get_shipping_address_form()
+        shipping_form = self.get_billing_address_form()
         billing_form = self.get_billing_address_form()
         extra_info_form = self.get_extra_info_form()
         if shipping_form.is_valid() and billing_form.is_valid() and extra_info_form.is_valid():
@@ -221,7 +177,7 @@ class CheckoutSelectionView(LoginMixin, ShopTemplateView):
         """
         ctx = super(CheckoutSelectionView, self).get_context_data(**kwargs)
 
-        shipping_address_form = self.get_shipping_address_form()
+        shipping_address_form = self.get_billing_address_form()
         billing_address_form = self.get_billing_address_form()
         billingshipping_form = self.get_billing_and_shipping_selection_form()
         extra_info_form = self.get_extra_info_form()
@@ -236,7 +192,6 @@ class CheckoutSelectionView(LoginMixin, ShopTemplateView):
 
 class OrderConfirmView(RedirectView):
     url_name = 'checkout_payment'
-    permanent = False
 
     def confirm_order(self):
         order = get_order_from_request(self.request)
