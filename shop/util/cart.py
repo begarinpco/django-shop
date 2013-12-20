@@ -61,11 +61,9 @@ def get_or_create_cart(request, save=False):
                 cart = session_cart
 
                 """ 
-                Hook by pb
-
+                Hook
                 In this part, we try to delete user's own products that user put in cart before log in
                 """ 
-                print "cart: " + str(cart.id)
                 try:
                     session_cart_items = CartItem.objects.filter(cart_id=cart.id)
                 except CartItem.DoesNotExist:
@@ -74,23 +72,13 @@ def get_or_create_cart(request, save=False):
                     for item in session_cart_items:
                         if item.product_id:
                             pdt = Product.objects.get(pk=item.product_id)
-                            print "product item: " + str(pdt)
                             if pdt.user == request.user:
-                                print " c'est ma video"
-                                print " item id: " + str(item.id)
                                 item.delete()
                                 messages.add_message(request, messages.ERROR, 
                                     _("Your cart is modified."), extra_tags='alert-warning')
-                            else:
-                                print " ce n'est pas ma video"
-                                print " item id: " + str(item.id)
-
-                print "session_cart_items: " + str(session_cart_items)
                 """
                 End hook by pb
                 """
-
-
             else:
                 # if there is no session_cart, or it's empty, use the database cart
                 cart = get_cart_from_database(request)
