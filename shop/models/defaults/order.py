@@ -12,3 +12,4 @@ class Order(BaseOrder):
         app_label = 'shop'
         verbose_name = _('Order')
         verbose_name_plural = _('Orders')
+        ordering = ['-created']
