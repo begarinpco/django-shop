@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from shop.models.cartmodel import Cart, CartItem  # I add CartItem <-- PB
+from shop.models.ordermodel import Order, OrderItem  # I add CartItem <-- PB
 from django.contrib.auth.models import AnonymousUser
 
 from shop.models.productmodel import Product # I add this import <-- PB
 from django.contrib import messages  # I add this import <-- PB
 from django.utils.translation import ugettext_lazy as _   # I add this import <-- PB
+
 
 
 def get_cart_from_database(request):
@@ -48,7 +50,7 @@ def get_or_create_cart(request, save=False):
             if session_cart and session_cart.user == request.user:
                 # and the session cart already belongs to us, we are done
                 cart = session_cart
-            elif session_cart and not session_cart.is_empty and session_cart.user != request.user:
+            elif session_cart and session_cart.total_quantity > 0 and session_cart.user != request.user:
                 # if it does not belong to us yet
                 database_cart = get_cart_from_database(request)
                 if database_cart:
@@ -61,7 +63,8 @@ def get_or_create_cart(request, save=False):
                 cart = session_cart
 
                 """ 
-                Hook
+                Hook by pb
+
                 In this part, we try to delete user's own products that user put in cart before log in
                 """ 
                 try:
@@ -72,10 +75,29 @@ def get_or_create_cart(request, save=False):
                     for item in session_cart_items:
                         if item.product_id:
                             pdt = Product.objects.get(pk=item.product_id)
+                            # if video is mine
                             if pdt.user == request.user:
                                 item.delete()
                                 messages.add_message(request, messages.ERROR, 
                                     _("Your cart is modified."), extra_tags='alert-warning')
+
+                if request.user.is_authenticated():
+                    try:
+                        orders_user = Order.objects.filter(user_id=request.user.id)
+                        print "try: orders_user: " + str(orders_user)
+                    except Order.DoesNotExist:
+                        orders_user = None
+                    if orders_user:
+                        session_cart_items = CartItem.objects.filter(cart_id=cart.id)
+                        product_in_orderitem = OrderItem.objects.filter(order_id__in=orders_user).values('product_id').distinct()
+                        both_products_session_orders = CartItem.objects.filter(cart_id=cart.id, product_id__in=product_in_orderitem)
+                        for item in both_products_session_orders:
+                            if item.product_id:
+                                pdt = Product.objects.get(pk=item.product_id)
+                                item.delete()
+                                messages.add_message(request, messages.ERROR, 
+                                _("Your cart is modified because you still bought a or few videos."), extra_tags='alert-warning')
+
                 """
                 End hook by pb
                 """
